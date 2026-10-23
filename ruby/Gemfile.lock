@@ -1,0 +1,22 @@
+PATH
+  remote: .
+  specs:
+    rlox (0.0.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+
+PLATFORMS
+  ruby
+  x86_64-linux
+
+DEPENDENCIES
+  rlox!
+
+CHECKSUMS
+  bundler (4.0.23) sha256=407ba8a1d928f412847f819aa5f8b6aef7c59fb51feb517112af8a165487287b
+  rlox (0.0.0)
+
+BUNDLED WITH
+  4.0.23

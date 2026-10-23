@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+
+# frozen_string_literal: true
+
+require 'lox'
+
+if ARGV.length > 1
+  puts 'usage: rlox [script]'
+elsif ARGV.length == 1
+  Lox.run_file ARGF.read
+else
+  Lox.run_prompt
+end
