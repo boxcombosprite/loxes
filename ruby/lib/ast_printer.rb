@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require 'ast'
-require 'lexer'
+require_relative 'ast'
+require_relative 'lexer'
 
 class AstPrinter
   include Visitor
@@ -40,15 +40,15 @@ class AstPrinter
   end
 end
 
-expression = Binary.new(
-  Unary.new(
-    Token.new(:minus, '-', nil, 1),
-    Literal.new(123)
-  ),
-  Token.new(:star, '*', nil, 1),
-  Grouping.new(
-    Literal.new(45.67)
-  )
-)
-
-puts AstPrinter.new.print(expression)
+# expression = Binary.new(
+#   Unary.new(
+#     Token.new(:minus, '-', nil, 1),
+#     Literal.new(123)
+#   ),
+#   Token.new(:star, '*', nil, 1),
+#   Grouping.new(
+#     Literal.new(45.67)
+#   )
+# )
+#
+# puts AstPrinter.new.print(expression)

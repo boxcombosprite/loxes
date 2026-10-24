@@ -3,7 +3,3 @@
 task :run, [:script] do |_t, args|
   ruby '-Ilib', 'bin/rlox', *args[:script]
 end
-
-task :print_ast do |_t, _args|
-  ruby '-Ilib', 'bin/ast_printer'
-end

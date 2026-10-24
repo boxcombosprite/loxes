@@ -28,6 +28,8 @@ class Scanner
     @line = 1
   end
 
+  private
+
   def advance
     ret = @source[@current]
     @current += 1
@@ -78,7 +80,7 @@ class Scanner
     end
 
     if at_end?
-      Lox.error @line, 'unterminated string.'
+      Lox.lex_error @line, 'unterminated string.'
       return
     end
 
@@ -143,7 +145,7 @@ class Scanner
       elsif alpha? c
         identifier
       else
-        Lox.error(@line, 'unexpected character.')
+        Lox.lex_error(@line, 'unexpected character.')
       end
     end
   end

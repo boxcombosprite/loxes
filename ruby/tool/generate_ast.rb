@@ -4,7 +4,7 @@
 
 def define_ast(output_dir, base_name, types)
   path = "#{output_dir}/ast.rb"
-  File.open(path, 'a+') do |f|
+  File.open(path, 'w') do |f|
     f.write "module #{base_name}\n"
     f.write "  def accept(o)\n"
     f.write "    raise NotImplementedError\n"

@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require_relative 'lexer'
+require_relative 'parser'
+require_relative 'ast_printer'
 
 class Lox
   @had_error = false
@@ -10,17 +12,27 @@ class Lox
     @had_error = true
   end
 
-  def self.error(line, msg)
+  def self.lex_error(line, msg)
     report line, '', msg
+  end
+
+  def self.parse_error(token, message)
+    if token.type == :eof
+      report token.line, ' at end', message
+    else
+      report token.line, " at '#{token.lexeme}'", message
+    end
   end
 
   def self.run(src)
     scanner = Scanner.new src
     tokens = scanner.scan_tokens
+    parser = Parser.new tokens
+    expression = parser.parse
 
-    tokens.each do |tok|
-      puts tok
-    end
+    return if @had_error
+
+    puts AstPrinter.new.print expression
   end
 
   def self.run_file(buf)
