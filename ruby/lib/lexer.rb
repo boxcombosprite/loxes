@@ -171,6 +171,8 @@ class Token
     @line = line
   end
 
+  attr_reader :lexeme, :literal, :line, :type
+
   def to_s
     "#{@type} #{@lexeme} #{@literal}"
   end
