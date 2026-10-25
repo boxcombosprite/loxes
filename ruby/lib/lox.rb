@@ -2,10 +2,14 @@
 
 require_relative 'lexer'
 require_relative 'parser'
+require_relative 'interpreter'
 require_relative 'ast_printer'
 
 class Lox
   @had_error = false
+  @had_runtime_error = false
+
+  @interpreter = Interpreter.new
 
   def self.report(line, where, msg)
     warn "[line #{line}] Error#{where} : #{msg}"
@@ -24,6 +28,11 @@ class Lox
     end
   end
 
+  def self.runtime_error(error)
+    puts "#{error.message}\n[line #{error.token.line}]"
+    @had_runtime_error = true
+  end
+
   def self.run(src)
     scanner = Scanner.new src
     tokens = scanner.scan_tokens
@@ -32,12 +41,13 @@ class Lox
 
     return if @had_error
 
-    puts AstPrinter.new.print expression
+    @interpreter.interpret expression
   end
 
   def self.run_file(buf)
     run buf
     exit 65 if @had_error
+    exit 70 if @had_runtime_error
   end
 
   def self.run_prompt

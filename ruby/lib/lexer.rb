@@ -28,6 +28,16 @@ class Scanner
     @line = 1
   end
 
+  def scan_tokens
+    until at_end?
+      @start = @current
+      scan_token
+    end
+
+    @tokens << Token.new(:eof, '', nil, @line)
+    @tokens
+  end
+
   private
 
   def advance
@@ -148,16 +158,6 @@ class Scanner
         Lox.lex_error(@line, 'unexpected character.')
       end
     end
-  end
-
-  def scan_tokens
-    until at_end?
-      @start = @current
-      scan_token
-    end
-
-    @tokens << Token.new(:eof, '', nil, @line)
-    @tokens
   end
 
   def at_end?
