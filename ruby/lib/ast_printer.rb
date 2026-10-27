@@ -4,7 +4,7 @@ require_relative 'ast'
 require_relative 'lexer'
 
 class AstPrinter
-  include Visitor
+  include Expr::Visitor
 
   def print(expr)
     expr.accept self

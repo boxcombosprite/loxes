@@ -2,51 +2,54 @@
 
 # frozen_string_literal: true
 
-def define_ast(output_dir, base_name, types)
-  path = "#{output_dir}/ast.rb"
-  File.open(path, 'w') do |f|
-    f.write "module #{base_name}\n"
-    f.write "  def accept(o)\n"
-    f.write "    raise NotImplementedError\n"
-    f.write "  end\n"
-    f.write "end\n\n"
-
-    types.each do |t|
-      class_name = t.split(':')[0].strip
-      fields = t.split(':')[1].strip
-      define_type f, base_name, class_name, fields
-    end
-
-    define_visitor f, types
-  end
+def define_acceptor(fh)
+  fh.write "module Acceptor\n"
+  fh.write "  def accept(o)\n"
+  fh.write "    raise NotImplementedError\n"
+  fh.write "  end\n"
+  fh.write "end\n\n"
 end
 
-def define_visitor(fh, types)
-  fh.write "module Visitor\n"
+def define_ast(fh, base_name, types)
+  fh.write "module #{base_name}\n"
+
   types.each do |t|
-    t_name = t.split(':')[0].strip.downcase
-    fh.write "  def visit_#{t_name}(o)\n"
-    fh.write "    raise NotImplementedError\n"
-    fh.write "  end\n"
+    class_name = t.split(':')[0].strip
+    fields = t.split(':')[1].strip
+    define_type fh, class_name, fields, '  '
   end
+
+  define_visitor fh, types, '  '
+
   fh.write "end\n"
 end
 
-def define_type(fh, base_name, class_name, fields)
-  fh.write "class #{class_name}\n"
-  fh.write "  include #{base_name}\n"
-  fh.write "  def accept(visitor)\n"
-  fh.write "    visitor.visit_#{class_name.downcase} self\n"
-  fh.write "  end\n"
-  fh.write "  def initialize(#{fields})\n"
-  fields.split(', ').each do |field_name|
-    fh.write "    @#{field_name} = #{field_name}\n"
+def define_visitor(fh, types, indent = '')
+  fh.write "#{indent}module Visitor\n"
+  types.each do |t|
+    t_name = t.split(':')[0].strip.downcase
+    fh.write "#{indent}  def visit_#{t_name}(o)\n"
+    fh.write "#{indent}    raise NotImplementedError\n"
+    fh.write "#{indent}  end\n"
   end
-  fh.write "  end\n"
+  fh.write "#{indent}end\n"
+end
+
+def define_type(fh, class_name, fields, indent = '')
+  fh.write "#{indent}class #{class_name}\n"
+  fh.write "#{indent}  include Acceptor\n"
+  fh.write "#{indent}  def accept(visitor)\n"
+  fh.write "#{indent}    visitor.visit_#{class_name.downcase} self\n"
+  fh.write "#{indent}  end\n"
+  fh.write "#{indent}  def initialize(#{fields})\n"
   fields.split(', ').each do |field_name|
-    fh.write "  attr_reader :#{field_name}\n"
+    fh.write "#{indent}    @#{field_name} = #{field_name}\n"
   end
-  fh.write "end\n\n"
+  fh.write "#{indent}  end\n"
+  fields.split(', ').each do |field_name|
+    fh.write "#{indent}  attr_reader :#{field_name}\n"
+  end
+  fh.write "#{indent}end\n\n"
 end
 
 unless ARGV.length == 1
@@ -56,9 +59,19 @@ end
 
 output_dir = ARGV[0]
 
-define_ast output_dir, 'Expr', [
-  'Binary   : left, operator, right',
-  'Grouping : expression',
-  'Literal  : value',
-  'Unary    : operator, right'
-]
+path = "#{output_dir}/ast.rb"
+File.open(path, 'w') do |f|
+  define_acceptor f
+
+  define_ast f, 'Expr', [
+    'Binary   : left, operator, right',
+    'Grouping : expression',
+    'Literal  : value',
+    'Unary    : operator, right'
+  ]
+
+  define_ast f, 'Stmt', [
+    'Expression : expression',
+    'Print      : expression'
+  ]
+end
