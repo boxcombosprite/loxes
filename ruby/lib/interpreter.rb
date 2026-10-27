@@ -2,6 +2,7 @@
 
 require_relative 'ast'
 require_relative 'lox'
+require_relative 'environment'
 
 class LoxRuntimeError < RuntimeError
   attr_reader :token
@@ -13,24 +14,28 @@ class LoxRuntimeError < RuntimeError
 end
 
 class Interpreter
-  include Visitor
+  include Expr::Visitor
+  include Stmt::Visitor
 
-  def interpret(expression)
-    value = evaluate expression
-    puts stringify(value)
+  def initialize
+    @environment = Environment.new
+  end
+
+  def interpret(statements)
+    statements.each { |s| execute s }
   rescue LoxRuntimeError => e
     Lox.runtime_error e
   end
 
-  def visit_literal(expr)
+  def visit_literal_expr(expr)
     expr.value
   end
 
-  def visit_grouping(expr)
+  def visit_grouping_expr(expr)
     evaluate expr.expression
   end
 
-  def visit_unary(expr)
+  def visit_unary_expr(expr)
     right = evaluate expr.right
 
     case expr.operator.type
@@ -41,7 +46,11 @@ class Interpreter
     end
   end
 
-  def visit_binary(expr)
+  def visit_variable_expr(expr)
+    @environment.get expr.name
+  end
+
+  def visit_binary_expr(expr)
     left = evaluate expr.left
     right = evaluate expr.right
 
@@ -81,6 +90,34 @@ class Interpreter
     end
   end
 
+  def visit_assign_expr(expr)
+    value = evaluate expr.value
+    @environment.assign expr.name, value
+    value
+  end
+
+  def visit_expression_stmt(stmt)
+    evaluate stmt.expression
+    nil
+  end
+
+  def visit_print_stmt(stmt)
+    value = evaluate stmt.expression
+    puts stringify(value)
+    nil
+  end
+
+  def visit_var_stmt(stmt)
+    value = stmt.initializer.nil? ? nil : evaluate(stmt.initializer)
+
+    @environment.define stmt.name.lexeme, value
+    nil
+  end
+
+  def visit_block_stmt(stmt)
+    execute_block stmt.statements, Environment.new(@environment)
+  end
+
   private
 
   def stringify(o)
@@ -109,5 +146,20 @@ class Interpreter
 
   def evaluate(expr)
     expr.accept self
+  end
+
+  def execute(stmt)
+    stmt.accept self
+  end
+
+  def execute_block(statements, environment)
+    previous = @environment
+    begin
+      @environment = environment
+
+      statements.each { |s| execute s }
+    ensure
+      @environment = previous
+    end
   end
 end

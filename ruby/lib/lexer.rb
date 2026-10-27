@@ -118,8 +118,7 @@ class Scanner
     @source[@start...@current]
 
     text = @source[@start...@current]
-    type = KEYWORDS[text]
-    type = :identifier if type.nil?
+    type = KEYWORDS.fetch text, :identifier
     add_token type
   end
 

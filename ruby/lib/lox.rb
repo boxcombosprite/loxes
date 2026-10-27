@@ -37,11 +37,11 @@ class Lox
     scanner = Scanner.new src
     tokens = scanner.scan_tokens
     parser = Parser.new tokens
-    expression = parser.parse
+    statements = parser.parse
 
     return if @had_error
 
-    @interpreter.interpret expression
+    @interpreter.interpret statements
   end
 
   def self.run_file(buf)

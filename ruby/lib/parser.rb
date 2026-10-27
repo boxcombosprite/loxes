@@ -13,9 +13,10 @@ class Parser
   end
 
   def parse
-    expression
-  rescue ParseError
-    nil
+    statements = []
+    statements << declaration until at_end?
+
+    statements
   end
 
   private
@@ -81,7 +82,71 @@ class Parser
   end
 
   def expression
-    equality
+    assignment
+  end
+
+  def declaration
+    return var_declaration if match :var
+
+    statement
+  rescue ParseError
+    synchronize
+    nil
+  end
+
+  def statement
+    return print_statement if match :print
+    return Stmt::Block.new block if match :left_brace
+
+    expression_statement
+  end
+
+  def print_statement
+    value = expression
+    consume :semicolon, "expect ';' after value."
+    Stmt::Print.new value
+  end
+
+  def var_declaration
+    name = consume :identifier, 'expect variable name.'
+
+    initializer = match(:equal) ? expression : nil
+
+    consume :semicolon, "expect ';' after variable declaration."
+    Stmt::Var.new name, initializer
+  end
+
+  def expression_statement
+    expr = expression
+    consume :semicolon, "expect ';' after value."
+    Stmt::Expression.new expr
+  end
+
+  def block
+    statements = []
+
+    statements << declaration until check(:right_brace) || at_end?
+
+    consume :right_brace, "expect '}' after block."
+    statements
+  end
+
+  def assignment
+    expr = equality
+
+    if match :equal
+      equals = previous
+      value = assignment
+
+      if expr.is_a? Expr::Variable
+        name = expr.name
+        return Expr::Assign.new name, value
+      end
+
+      error equals, 'invalid assignment target.'
+    end
+
+    expr
   end
 
   def equality
@@ -89,7 +154,7 @@ class Parser
     while match :bang_equal, :equal_equal
       operator = previous
       right = comparison
-      expr = Binary.new expr, operator, right
+      expr = Expr::Binary.new expr, operator, right
     end
 
     expr
@@ -101,7 +166,7 @@ class Parser
     while match :greater, :greater_equal, :less, :less_equal
       operator = previous
       right = term
-      expr = Binary.new expr, operator, right
+      expr = Expr::Binary.new expr, operator, right
     end
 
     expr
@@ -113,7 +178,7 @@ class Parser
     while match :minus, :plus
       operator = previous
       right = factor
-      expr = Binary.new expr, operator, right
+      expr = Expr::Binary.new expr, operator, right
     end
 
     expr
@@ -125,7 +190,7 @@ class Parser
     while match :slash, :star
       operator = previous
       right = unary
-      expr = Binary.new expr, operator, right
+      expr = Expr::Binary.new expr, operator, right
     end
 
     expr
@@ -135,23 +200,23 @@ class Parser
     if match :bang, :minus
       operator = previous
       right = unary
-      return Unary.new operator, right
+      return Expr::Unary.new operator, right
     end
 
     primary
   end
 
   def primary
-    return Literal.new(false) if match :false
-    return Literal.new(true) if match :true
-    return Literal.new(nil) if match :nil
-
-    return Literal.new(previous.literal) if match :number, :string
+    return Expr::Literal.new(false) if match :false
+    return Expr::Literal.new(true) if match :true
+    return Expr::Literal.new(nil) if match :nil
+    return Expr::Literal.new(previous.literal) if match :number, :string
+    return Expr::Variable.new(previous) if match :identifier
 
     if match :left_paren
       expr = expression
       consume :right_paren, "expect ')' after expression."
-      return Grouping.new expr
+      return Expr::Grouping.new expr
     end
 
     raise error peek, 'expect expression.'
