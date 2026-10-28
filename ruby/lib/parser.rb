@@ -95,10 +95,52 @@ class Parser
   end
 
   def statement
+    return for_statement if match :for
+    return if_statment if match :if
     return print_statement if match :print
+    return while_statement if match :while
     return Stmt::Block.new block if match :left_brace
 
     expression_statement
+  end
+
+  def for_statement
+    consume :left_paren, "expect '(' after 'for'."
+
+    initializer = if match :semicolon
+                    nil
+                  elsif match :var
+                    var_declaration
+                  else
+                    expression_statement
+                  end
+
+    condition = check(:semicolon) ? nil : expression
+    consume :semicolon, "expect ';' after loop condition."
+
+    increment = check(:right_paren) ? nil : expression
+    consume :right_paren, "expect ')' after for clauses."
+    body = statement
+
+    body = Stmt::Block.new [body, Stmt::Expression.new(increment)] unless increment.nil?
+
+    condition = Expr::Literal.new true if condition.nil?
+    body = Stmt::While.new condition, body
+
+    body = Stmt::Block.new [initializer, body] unless initializer.nil?
+
+    body
+  end
+
+  def if_statement
+    consume :left_paren, "expect '(' after 'if'."
+    condition = expression
+    consume :right_paren, "expect ')' after if condition."
+
+    then_branch = statement
+    else_branch = match(:else) ? statement : nil
+
+    Stmt::If.new condition, then_branch, else_branch
   end
 
   def print_statement
@@ -114,6 +156,15 @@ class Parser
 
     consume :semicolon, "expect ';' after variable declaration."
     Stmt::Var.new name, initializer
+  end
+
+  def while_statement
+    consume :left_paren, "expect '(' after 'while'."
+    condition = expression
+    consume :right_paren, "expect ')' after condition."
+    body = statement
+
+    Stmt::While.new condition, body
   end
 
   def expression_statement
@@ -132,7 +183,7 @@ class Parser
   end
 
   def assignment
-    expr = equality
+    expr = or_
 
     if match :equal
       equals = previous
@@ -144,6 +195,30 @@ class Parser
       end
 
       error equals, 'invalid assignment target.'
+    end
+
+    expr
+  end
+
+  def or_
+    expr = and_
+
+    while match :or
+      operator = previous
+      right = and_
+      expr = Expr::Logical.new expr, operator, right
+    end
+
+    expr
+  end
+
+  def and_
+    expr = equality
+
+    while match :and
+      operator = previous
+      right = equality
+      expr = Expr::Logical.new expr, operator, right
     end
 
     expr

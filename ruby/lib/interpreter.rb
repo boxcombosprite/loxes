@@ -31,6 +31,18 @@ class Interpreter
     expr.value
   end
 
+  def visit_logical_expr(expr)
+    left = evaluate expr.left
+
+    if expr.operator.type == :or
+      return left if left
+    else
+      return left unless left
+    end
+
+    evaluate expr.right
+  end
+
   def visit_grouping_expr(expr)
     evaluate expr.expression
   end
@@ -101,6 +113,15 @@ class Interpreter
     nil
   end
 
+  def visit_if_stmt(stmt)
+    if evaluate stmt.condition
+      execute stmt.then_branch
+    elsif !stmt.else_branch.nil?
+      execute stmt.else_branch
+    end
+    nil
+  end
+
   def visit_print_stmt(stmt)
     value = evaluate stmt.expression
     puts stringify(value)
@@ -111,6 +132,11 @@ class Interpreter
     value = stmt.initializer.nil? ? nil : evaluate(stmt.initializer)
 
     @environment.define stmt.name.lexeme, value
+    nil
+  end
+
+  def visit_while_stmt(stmt)
+    execute stmt.body while evaluate stmt.condition
     nil
   end
 

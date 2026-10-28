@@ -68,6 +68,7 @@ File.open(path, 'w') do |f|
     'Binary   : left, operator, right',
     'Grouping : expression',
     'Literal  : value',
+    'Logical  : left, operator, right',
     'Unary    : operator, right',
     'Variable : name'
   ]
@@ -75,7 +76,9 @@ File.open(path, 'w') do |f|
   define_ast f, 'Stmt', [
     'Block      : statements',
     'Expression : expression',
+    'If         : condition, then_branch, else_branch',
     'Print      : expression',
+    'While      : condition, body',
     'Var        : name, initializer'
   ]
 end

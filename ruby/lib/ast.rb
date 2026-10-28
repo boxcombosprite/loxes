@@ -55,6 +55,21 @@ module Expr
     attr_reader :value
   end
 
+  class Logical
+    include Acceptor
+    def accept(visitor)
+      visitor.visit_logical_expr self
+    end
+    def initialize(left, operator, right)
+      @left = left
+      @operator = operator
+      @right = right
+    end
+    attr_reader :left
+    attr_reader :operator
+    attr_reader :right
+  end
+
   class Unary
     include Acceptor
     def accept(visitor)
@@ -92,6 +107,9 @@ module Expr
     def visit_literal_expr(o)
       raise NotImplementedError
     end
+    def visit_logical_expr(o)
+      raise NotImplementedError
+    end
     def visit_unary_expr(o)
       raise NotImplementedError
     end
@@ -123,6 +141,21 @@ module Stmt
     attr_reader :expression
   end
 
+  class If
+    include Acceptor
+    def accept(visitor)
+      visitor.visit_if_stmt self
+    end
+    def initialize(condition, then_branch, else_branch)
+      @condition = condition
+      @then_branch = then_branch
+      @else_branch = else_branch
+    end
+    attr_reader :condition
+    attr_reader :then_branch
+    attr_reader :else_branch
+  end
+
   class Print
     include Acceptor
     def accept(visitor)
@@ -132,6 +165,19 @@ module Stmt
       @expression = expression
     end
     attr_reader :expression
+  end
+
+  class While
+    include Acceptor
+    def accept(visitor)
+      visitor.visit_while_stmt self
+    end
+    def initialize(condition, body)
+      @condition = condition
+      @body = body
+    end
+    attr_reader :condition
+    attr_reader :body
   end
 
   class Var
@@ -154,7 +200,13 @@ module Stmt
     def visit_expression_stmt(o)
       raise NotImplementedError
     end
+    def visit_if_stmt(o)
+      raise NotImplementedError
+    end
     def visit_print_stmt(o)
+      raise NotImplementedError
+    end
+    def visit_while_stmt(o)
       raise NotImplementedError
     end
     def visit_var_stmt(o)
