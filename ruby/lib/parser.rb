@@ -96,7 +96,7 @@ class Parser
 
   def statement
     return for_statement if match :for
-    return if_statment if match :if
+    return if_statement if match :if
     return print_statement if match :print
     return while_statement if match :while
     return Stmt::Block.new block if match :left_brace
