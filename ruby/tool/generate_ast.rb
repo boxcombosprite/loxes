@@ -66,6 +66,7 @@ File.open(path, 'w') do |f|
   define_ast f, 'Expr', [
     'Assign   : name, value',
     'Binary   : left, operator, right',
+    'Call     : callee, paren, arguments',
     'Grouping : expression',
     'Literal  : value',
     'Logical  : left, operator, right',
@@ -76,6 +77,7 @@ File.open(path, 'w') do |f|
   define_ast f, 'Stmt', [
     'Block      : statements',
     'Expression : expression',
+    'Function   : name, params, body',
     'If         : condition, then_branch, else_branch',
     'Print      : expression',
     'While      : condition, body',

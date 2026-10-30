@@ -33,6 +33,21 @@ module Expr
     attr_reader :right
   end
 
+  class Call
+    include Acceptor
+    def accept(visitor)
+      visitor.visit_call_expr self
+    end
+    def initialize(callee, paren, arguments)
+      @callee = callee
+      @paren = paren
+      @arguments = arguments
+    end
+    attr_reader :callee
+    attr_reader :paren
+    attr_reader :arguments
+  end
+
   class Grouping
     include Acceptor
     def accept(visitor)
@@ -101,6 +116,9 @@ module Expr
     def visit_binary_expr(o)
       raise NotImplementedError
     end
+    def visit_call_expr(o)
+      raise NotImplementedError
+    end
     def visit_grouping_expr(o)
       raise NotImplementedError
     end
@@ -139,6 +157,21 @@ module Stmt
       @expression = expression
     end
     attr_reader :expression
+  end
+
+  class Function
+    include Acceptor
+    def accept(visitor)
+      visitor.visit_function_stmt self
+    end
+    def initialize(name, params, body)
+      @name = name
+      @params = params
+      @body = body
+    end
+    attr_reader :name
+    attr_reader :params
+    attr_reader :body
   end
 
   class If
@@ -198,6 +231,9 @@ module Stmt
       raise NotImplementedError
     end
     def visit_expression_stmt(o)
+      raise NotImplementedError
+    end
+    def visit_function_stmt(o)
       raise NotImplementedError
     end
     def visit_if_stmt(o)

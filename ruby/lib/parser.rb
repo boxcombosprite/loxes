@@ -86,6 +86,7 @@ class Parser
   end
 
   def declaration
+    return function 'function' if match :fun
     return var_declaration if match :var
 
     statement
@@ -171,6 +172,24 @@ class Parser
     expr = expression
     consume :semicolon, "expect ';' after value."
     Stmt::Expression.new expr
+  end
+
+  def function(kind)
+    name = consume :identifier, "expect #{kind} name."
+    consume :left_paren, "expect '(' after #{kind} name."
+    parameters = []
+    unless check :right_paren
+      loop do
+        error peek, "can't have more than 255 parameters" if parameters.length >= 255
+        parameters << consume(:identifier, 'expect parameter name.')
+        break unless match :comma
+      end
+    end
+    consume :right_paren, "expect ')' after parameters."
+    consume :left_brace, "expect '{' before #{kind} body."
+    body = block
+
+    Stmt::Function.new name, parameters, body
   end
 
   def block
@@ -278,7 +297,34 @@ class Parser
       return Expr::Unary.new operator, right
     end
 
-    primary
+    call
+  end
+
+  def finish_call(callee)
+    arguments = []
+    unless check :right_paren
+      loop do
+        error peek, "can't have more than 255 arguments" if arguments.length >= 255
+        arguments << expression
+        break unless match :comma
+      end
+    end
+
+    paren = consume :right_paren, "expect ')' after arguments."
+
+    Expr::Call.new callee, paren, arguments
+  end
+
+  def call
+    expr = primary
+
+    loop do
+      break unless match :left_paren
+
+      expr = finish_call expr
+    end
+
+    expr
   end
 
   def primary

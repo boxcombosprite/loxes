@@ -2,6 +2,8 @@
 
 require_relative 'ast'
 require_relative 'lox'
+require_relative 'callable'
+require_relative 'function'
 require_relative 'environment'
 
 class LoxRuntimeError < RuntimeError
@@ -17,8 +19,26 @@ class Interpreter
   include Expr::Visitor
   include Stmt::Visitor
 
+  attr_reader :globals
+
   def initialize
-    @environment = Environment.new
+    @globals = Environment.new
+    @globals.define 'clock', Class.new do
+      include Callable
+      def arity
+        0
+      end
+
+      def _call(_interpreter, _arguments)
+        Time.now.to_f
+      end
+
+      def to_s
+        '<native fn>'
+      end
+    end.new
+
+    @environment = globals
   end
 
   def interpret(statements)
@@ -102,6 +122,23 @@ class Interpreter
     end
   end
 
+  def visit_call_expr(expr)
+    function = evaluate expr.callee
+
+    arguments = []
+    expr.arguments.each { |a| arguments << evaluate(a) }
+
+    unless function.class.method_defined? :_call
+      raise LoxRuntimeError.new expr.paren, 'can only call functions and classes.'
+    end
+
+    unless arguments.length == function.arity
+      raise LoxRuntimeError.new expr.paren, "expected #{function.arity} args but got #{arguments.length}."
+    end
+
+    function._call self, arguments
+  end
+
   def visit_assign_expr(expr)
     value = evaluate expr.value
     @environment.assign expr.name, value
@@ -110,6 +147,12 @@ class Interpreter
 
   def visit_expression_stmt(stmt)
     evaluate stmt.expression
+    nil
+  end
+
+  def visit_function_stmt(stmt)
+    function = Function.new stmt
+    @environment.define stmt.name.lexeme, function
     nil
   end
 
@@ -144,6 +187,17 @@ class Interpreter
     execute_block stmt.statements, Environment.new(@environment)
   end
 
+  def execute_block(statements, environment)
+    previous = @environment
+    begin
+      @environment = environment
+
+      statements.each { |s| execute s }
+    ensure
+      @environment = previous
+    end
+  end
+
   private
 
   def stringify(o)
@@ -176,16 +230,5 @@ class Interpreter
 
   def execute(stmt)
     stmt.accept self
-  end
-
-  def execute_block(statements, environment)
-    previous = @environment
-    begin
-      @environment = environment
-
-      statements.each { |s| execute s }
-    ensure
-      @environment = previous
-    end
   end
 end
