@@ -6,9 +6,17 @@ require_relative 'environment'
 class Function
   include Callable
 
-  def initialize(declaration, closure)
+  def initialize(declaration, closure, is_initializer)
     @declaration = declaration
     @closure = closure
+    @is_initilizer = is_initializer
+  end
+
+  def bind(instance)
+    environment = Environment.new @closure
+    environment.define 'this', instance
+
+    Function.new @declaration, environment, @is_initializer
   end
 
   def _call(interpreter, arguments)
@@ -20,8 +28,13 @@ class Function
     begin
       interpreter.eval_block @declaration.body, environment
     rescue Return => e
+      return @closure.get_at 0, 'this' if @is_initializer
+
       return e.value
     end
+
+    return @closure.get_at 0, 'this' if @is_initializer
+
     nil
   end
 

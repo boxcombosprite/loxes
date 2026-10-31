@@ -48,6 +48,19 @@ module Expr
     attr_reader :arguments
   end
 
+  class Get
+    include Acceptor
+    def accept(visitor)
+      visitor.visit_get_expr self
+    end
+    def initialize(object, name)
+      @object = object
+      @name = name
+    end
+    attr_reader :object
+    attr_reader :name
+  end
+
   class Grouping
     include Acceptor
     def accept(visitor)
@@ -85,6 +98,32 @@ module Expr
     attr_reader :right
   end
 
+  class Set
+    include Acceptor
+    def accept(visitor)
+      visitor.visit_set_expr self
+    end
+    def initialize(object, name, value)
+      @object = object
+      @name = name
+      @value = value
+    end
+    attr_reader :object
+    attr_reader :name
+    attr_reader :value
+  end
+
+  class This
+    include Acceptor
+    def accept(visitor)
+      visitor.visit_this_expr self
+    end
+    def initialize(keyword)
+      @keyword = keyword
+    end
+    attr_reader :keyword
+  end
+
   class Unary
     include Acceptor
     def accept(visitor)
@@ -119,6 +158,9 @@ module Expr
     def visit_call_expr(o)
       raise NotImplementedError
     end
+    def visit_get_expr(o)
+      raise NotImplementedError
+    end
     def visit_grouping_expr(o)
       raise NotImplementedError
     end
@@ -126,6 +168,12 @@ module Expr
       raise NotImplementedError
     end
     def visit_logical_expr(o)
+      raise NotImplementedError
+    end
+    def visit_set_expr(o)
+      raise NotImplementedError
+    end
+    def visit_this_expr(o)
       raise NotImplementedError
     end
     def visit_unary_expr(o)
@@ -146,6 +194,19 @@ module Stmt
       @statements = statements
     end
     attr_reader :statements
+  end
+
+  class Class
+    include Acceptor
+    def accept(visitor)
+      visitor.visit_class_stmt self
+    end
+    def initialize(name, methods)
+      @name = name
+      @methods = methods
+    end
+    attr_reader :name
+    attr_reader :methods
   end
 
   class Expression
@@ -241,6 +302,9 @@ module Stmt
 
   module Visitor
     def visit_block_stmt(o)
+      raise NotImplementedError
+    end
+    def visit_class_stmt(o)
       raise NotImplementedError
     end
     def visit_expression_stmt(o)

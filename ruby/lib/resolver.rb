@@ -11,12 +11,34 @@ class Resolver
     @interpreter = interpreter
     @scopes = []
     @current_function_type = :ft_none
+    @current_class_type = :ct_none
   end
 
   def visit_block_stmt(stmt)
     begin_scope
     resolve stmt.statements
     end_scope
+    nil
+  end
+
+  def visit_class_stmt(stmt)
+    enclosing_class_type = @current_class_type
+    @current_class_type = :ct_class
+
+    declare stmt.name
+    define stmt.name
+
+    begin_scope
+    @scopes.last['this'] = true
+
+    stmt.methods.each do |m|
+      declaration = m.name.lexeme.eql?('init') ? :ft_initializer : :ft_method
+      resolve_function m, declaration
+    end
+
+    end_scope
+
+    @current_class_type = enclosing_class_type
     nil
   end
 
@@ -46,7 +68,12 @@ class Resolver
 
   def visit_return_stmt(stmt)
     Lox.parse_error stmt.keyword, "can't return from top-level code." if @current_function_type == :ft_none
-    resolve stmt.value unless stmt.value.nil?
+    unless stmt.value.nil?
+      if @current_function_type == :ft_initializer
+        Lox.parse_error stmt.keyword, "can't return a value from an initializer."
+      end
+      resolve stmt.value
+    end
     nil
   end
 
@@ -92,6 +119,11 @@ class Resolver
     nil
   end
 
+  def visit_get_expr(expr)
+    resolve expr.object
+    nil
+  end
+
   def visit_grouping_expr(expr)
     resolve expr.expression
     nil
@@ -107,6 +139,21 @@ class Resolver
     nil
   end
 
+  def visit_set_expr(expr)
+    resolve expr.value
+    resolve expr.object
+    nil
+  end
+
+  def visit_this_expr(expr)
+    if @current_class_type == :ct_none
+      Lox.parse_error expr.keyword, "can't use 'this' outside of a class."
+      return nil
+    end
+    resolve_local expr, expr.keyword
+    nil
+  end
+
   def visit_unary_expr(expr)
     resolve expr.right
     nil
@@ -114,7 +161,7 @@ class Resolver
 
   def resolve(x)
     if x.is_a? Array
-      x.each { |t| resolve t }
+      x.each { |n| resolve n }
     else
       x.accept self
     end

@@ -5,6 +5,7 @@ require_relative 'lox'
 require_relative 'callable'
 require_relative 'function'
 require_relative 'environment'
+require_relative 'class'
 
 class LoxRuntimeError < RuntimeError
   attr_reader :token
@@ -71,6 +72,20 @@ class Interpreter
     end
 
     eval_ expr.right
+  end
+
+  def visit_set_expr(expr)
+    object = eval_ expr.object
+    raise LoxRuntimeError.new expr.name, 'only instances have fields.' unless object.is_a? LoxInstance
+
+    value = eval_ expr.value
+    object.set expr.name, value
+
+    value
+  end
+
+  def visit_this_expr(expr)
+    lookup_variable expr.keyword, expr
   end
 
   def visit_grouping_expr(expr)
@@ -158,6 +173,13 @@ class Interpreter
     function._call self, arguments
   end
 
+  def visit_get_expr(expr)
+    object = eval_ expr.object
+    return object.get expr.name if object.is_a? LoxInstance
+
+    raise LoxRuntimeError.new expr.name, 'only instances have properties.'
+  end
+
   def visit_assign_expr(expr)
     value = eval_ expr.value
 
@@ -177,7 +199,7 @@ class Interpreter
   end
 
   def visit_function_stmt(stmt)
-    function = Function.new stmt, @environment
+    function = Function.new stmt, @environment, false
     @environment.define stmt.name.lexeme, function
     nil
   end
@@ -217,6 +239,20 @@ class Interpreter
 
   def visit_block_stmt(stmt)
     eval_block stmt.statements, Environment.new(@environment)
+  end
+
+  def visit_class_stmt(stmt)
+    @environment.define stmt.name.lexeme, nil
+
+    methods = {}
+    stmt.methods.each do |m|
+      function = Function.new m, @environment, m.name.lexeme.eql?('init')
+      methods[m.name.lexeme] = function
+    end
+
+    klass = LoxClass.new stmt.name.lexeme, methods
+    @environment.assign stmt.name, klass
+    nil
   end
 
   def eval_block(statements, environment)

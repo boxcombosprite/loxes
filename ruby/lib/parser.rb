@@ -86,6 +86,7 @@ class Parser
   end
 
   def declaration
+    return class_declaration if match :class
     return function 'function' if match :fun
     return var_declaration if match :var
 
@@ -93,6 +94,18 @@ class Parser
   rescue ParseError
     synchronize
     nil
+  end
+
+  def class_declaration
+    name = consume :identifier, 'expect class name.'
+    consume :left_brace, "expect '{' before class body."
+
+    methods = []
+    methods << function('method') until check(:right_brace) || at_end?
+
+    consume :right_brace, "expect '}' after class body."
+
+    Stmt::Class.new name, methods
   end
 
   def statement
@@ -218,8 +231,9 @@ class Parser
       value = assignment
 
       if expr.is_a? Expr::Variable
-        name = expr.name
-        return Expr::Assign.new name, value
+        return Expr::Assign.new expr.name, value
+      elsif expr.is_a? Expr::Get
+        return Expr::Set.new expr.object, expr.name, value
       end
 
       error equals, 'invalid assignment target.'
@@ -328,9 +342,14 @@ class Parser
     expr = primary
 
     loop do
-      break unless match :left_paren
-
-      expr = finish_call expr
+      if match :left_paren
+        expr = finish_call expr
+      elsif match :dot
+        name = consume :identifier, "expect property name after '.'."
+        expr = Expr::Get.new expr, name
+      else
+        break
+      end
     end
 
     expr
@@ -341,6 +360,7 @@ class Parser
     return Expr::Literal.new(true) if match :true
     return Expr::Literal.new(nil) if match :nil
     return Expr::Literal.new(previous.literal) if match :number, :string
+    return Expr::This.new(previous) if match :this
     return Expr::Variable.new(previous) if match :identifier
 
     if match :left_paren
