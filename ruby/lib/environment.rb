@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Environment
+  attr_reader :values, :enclosing
+
   def initialize(enclosing = nil)
     @enclosing = enclosing
     @values = {}
@@ -8,6 +10,20 @@ class Environment
 
   def define(name, value)
     @values[name] = value
+  end
+
+  def ancestor(distance)
+    environment = self
+    [0..distance].each { environment = environment.enclosing }
+    environment
+  end
+
+  def get_at(distance, name)
+    ancestor(distance).values[name]
+  end
+
+  def assign_at(distance, name, value)
+    ancestor(distance).values[name.lexeme] = value
   end
 
   def get(name)

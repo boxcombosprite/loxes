@@ -3,6 +3,7 @@
 require_relative 'lexer'
 require_relative 'parser'
 require_relative 'interpreter'
+require_relative 'resolver'
 require_relative 'ast_printer'
 
 class Lox
@@ -38,6 +39,11 @@ class Lox
     tokens = scanner.scan_tokens
     parser = Parser.new tokens
     statements = parser.parse
+
+    return if @had_error
+
+    resolver = Resolver.new @interpreter
+    resolver.resolve statements
 
     return if @had_error
 

@@ -48,10 +48,11 @@ class Interpreter
     end.new
 
     @environment = globals
+    @locals = {}
   end
 
   def interpret(statements)
-    statements.each { |s| execute s }
+    statements.each { |s| eval_ s }
   rescue LoxRuntimeError => e
     Lox.runtime_error e
   end
@@ -61,7 +62,7 @@ class Interpreter
   end
 
   def visit_logical_expr(expr)
-    left = evaluate expr.left
+    left = eval_ expr.left
 
     if expr.operator.type == :or
       return left if left
@@ -69,15 +70,15 @@ class Interpreter
       return left unless left
     end
 
-    evaluate expr.right
+    eval_ expr.right
   end
 
   def visit_grouping_expr(expr)
-    evaluate expr.expression
+    eval_ expr.expression
   end
 
   def visit_unary_expr(expr)
-    right = evaluate expr.right
+    right = eval_ expr.right
 
     case expr.operator.type
     when :minus
@@ -88,12 +89,21 @@ class Interpreter
   end
 
   def visit_variable_expr(expr)
-    @environment.get expr.name
+    lookup_variable expr.name, expr
+  end
+
+  def lookup_variable(name, expr)
+    distance = @locals[expr]
+    if !distance.nil?
+      @environment.get_at distance, name.lexeme
+    else
+      @globals.get name
+    end
   end
 
   def visit_binary_expr(expr)
-    left = evaluate expr.left
-    right = evaluate expr.right
+    left = eval_ expr.left
+    right = eval_ expr.right
 
     case expr.operator.type
     when :greater
@@ -132,10 +142,10 @@ class Interpreter
   end
 
   def visit_call_expr(expr)
-    function = evaluate expr.callee
+    function = eval_ expr.callee
 
     arguments = []
-    expr.arguments.each { |a| arguments << evaluate(a) }
+    expr.arguments.each { |a| arguments << eval_(a) }
 
     unless function.class.method_defined? :_call
       raise LoxRuntimeError.new expr.paren, 'can only call functions and classes.'
@@ -149,13 +159,20 @@ class Interpreter
   end
 
   def visit_assign_expr(expr)
-    value = evaluate expr.value
-    @environment.assign expr.name, value
+    value = eval_ expr.value
+
+    distance = @locals[expr]
+    if !distance.nil?
+      @environment.assign_at distance, expr.name, value
+    else
+      @globals.assign expr.name, value
+    end
+
     value
   end
 
   def visit_expression_stmt(stmt)
-    evaluate stmt.expression
+    eval_ stmt.expression
     nil
   end
 
@@ -166,48 +183,48 @@ class Interpreter
   end
 
   def visit_if_stmt(stmt)
-    if evaluate stmt.condition
-      execute stmt.then_branch
+    if eval_ stmt.condition
+      eval_ stmt.then_branch
     elsif !stmt.else_branch.nil?
-      execute stmt.else_branch
+      eval_ stmt.else_branch
     end
     nil
   end
 
   def visit_print_stmt(stmt)
-    value = evaluate stmt.expression
+    value = eval_ stmt.expression
     puts stringify(value)
     nil
   end
 
   def visit_return_stmt(stmt)
-    value = stmt.value.nil? ? nil : evaluate(stmt.value)
+    value = stmt.value.nil? ? nil : eval_(stmt.value)
 
     raise Return.new value
   end
 
   def visit_var_stmt(stmt)
-    value = stmt.initializer.nil? ? nil : evaluate(stmt.initializer)
+    value = stmt.initializer.nil? ? nil : eval_(stmt.initializer)
 
     @environment.define stmt.name.lexeme, value
     nil
   end
 
   def visit_while_stmt(stmt)
-    execute stmt.body while evaluate stmt.condition
+    eval_ stmt.body while eval_ stmt.condition
     nil
   end
 
   def visit_block_stmt(stmt)
-    execute_block stmt.statements, Environment.new(@environment)
+    eval_block stmt.statements, Environment.new(@environment)
   end
 
-  def execute_block(statements, environment)
+  def eval_block(statements, environment)
     previous = @environment
     begin
       @environment = environment
 
-      statements.each { |s| execute s }
+      statements.each { |s| eval_ s }
     ensure
       @environment = previous
     end
@@ -239,11 +256,11 @@ class Interpreter
     raise LoxRuntimeError.new operator, 'operands must be numbers.'
   end
 
-  def evaluate(expr)
-    expr.accept self
+  def eval_(node)
+    node.accept self
   end
 
-  def execute(stmt)
-    stmt.accept self
+  def resolve(expr, depth)
+    @locals[expr] = depth
   end
 end
