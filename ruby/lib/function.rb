@@ -6,17 +6,22 @@ require_relative 'environment'
 class Function
   include Callable
 
-  def initialize(declaration)
+  def initialize(declaration, closure)
     @declaration = declaration
+    @closure = closure
   end
 
   def _call(interpreter, arguments)
-    environment = Environment.new interpreter.globals
+    environment = Environment.new @closure
     @declaration.params.zip(arguments).each do |p, a|
       environment.define p.lexeme, a
     end
 
-    interpreter.execute_block @declaration.body, environment
+    begin
+      interpreter.execute_block @declaration.body, environment
+    rescue Return => e
+      return e.value
+    end
     nil
   end
 

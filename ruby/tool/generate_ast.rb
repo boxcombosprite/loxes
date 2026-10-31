@@ -80,6 +80,7 @@ File.open(path, 'w') do |f|
     'Function   : name, params, body',
     'If         : condition, then_branch, else_branch',
     'Print      : expression',
+    'Return     : keyword, value',
     'While      : condition, body',
     'Var        : name, initializer'
   ]

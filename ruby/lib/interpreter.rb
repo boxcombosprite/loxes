@@ -15,6 +15,15 @@ class LoxRuntimeError < RuntimeError
   end
 end
 
+class Return < RuntimeError
+  attr_reader :value
+
+  def initialize(value)
+    @value = value
+    super
+  end
+end
+
 class Interpreter
   include Expr::Visitor
   include Stmt::Visitor
@@ -151,7 +160,7 @@ class Interpreter
   end
 
   def visit_function_stmt(stmt)
-    function = Function.new stmt
+    function = Function.new stmt, @environment
     @environment.define stmt.name.lexeme, function
     nil
   end
@@ -169,6 +178,12 @@ class Interpreter
     value = evaluate stmt.expression
     puts stringify(value)
     nil
+  end
+
+  def visit_return_stmt(stmt)
+    value = stmt.value.nil? ? nil : evaluate(stmt.value)
+
+    raise Return.new value
   end
 
   def visit_var_stmt(stmt)

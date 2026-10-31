@@ -99,6 +99,7 @@ class Parser
     return for_statement if match :for
     return if_statement if match :if
     return print_statement if match :print
+    return return_statement if match :return
     return while_statement if match :while
     return Stmt::Block.new block if match :left_brace
 
@@ -148,6 +149,14 @@ class Parser
     value = expression
     consume :semicolon, "expect ';' after value."
     Stmt::Print.new value
+  end
+
+  def return_statement
+    keyword = previous
+    value = check(:semicolon) ? nil : expression
+
+    consume :semicolon, "expect ';' after return value."
+    Stmt::Return.new keyword, value
   end
 
   def var_declaration

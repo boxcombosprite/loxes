@@ -200,6 +200,19 @@ module Stmt
     attr_reader :expression
   end
 
+  class Return
+    include Acceptor
+    def accept(visitor)
+      visitor.visit_return_stmt self
+    end
+    def initialize(keyword, value)
+      @keyword = keyword
+      @value = value
+    end
+    attr_reader :keyword
+    attr_reader :value
+  end
+
   class While
     include Acceptor
     def accept(visitor)
@@ -240,6 +253,9 @@ module Stmt
       raise NotImplementedError
     end
     def visit_print_stmt(o)
+      raise NotImplementedError
+    end
+    def visit_return_stmt(o)
       raise NotImplementedError
     end
     def visit_while_stmt(o)
