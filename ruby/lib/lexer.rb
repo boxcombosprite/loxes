@@ -141,7 +141,7 @@ class Scanner
     when '>' then add_token match('=') ? :greater_equal : :greater
     when '/'
       if match '/'
-        advance until peek == '\n' || at_end?
+        advance until peek == "\n" || at_end?
       else
         add_token :slash
       end
