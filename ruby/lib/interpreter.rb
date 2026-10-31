@@ -230,6 +230,10 @@ class Interpreter
     end
   end
 
+  def resolve(expr, depth)
+    @locals[expr] = depth
+  end
+
   private
 
   def stringify(o)
@@ -258,9 +262,5 @@ class Interpreter
 
   def eval_(node)
     node.accept self
-  end
-
-  def resolve(expr, depth)
-    @locals[expr] = depth
   end
 end

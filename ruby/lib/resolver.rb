@@ -45,7 +45,7 @@ class Resolver
   end
 
   def visit_return_stmt(stmt)
-    Lox.error stmt.keyword "can't return from top-level code." if @current_function_type == :ft_none
+    Lox.parse_error stmt.keyword, "can't return from top-level code." if @current_function_type == :ft_none
     resolve stmt.value unless stmt.value.nil?
     nil
   end
@@ -65,7 +65,7 @@ class Resolver
 
   def visit_variable_expr(expr)
     if !@scopes.empty? && @scopes.last[expr.name.lexeme] == false
-      Lox.error expr.name, "can't read local variable in its own initializer."
+      Lox.parse_error expr.name, "can't read local variable in its own initializer."
     end
 
     resolve_local expr, expr.name
@@ -112,8 +112,6 @@ class Resolver
     nil
   end
 
-  private
-
   def resolve(x)
     if x.is_a? Array
       x.each { |t| resolve t }
@@ -121,6 +119,8 @@ class Resolver
       x.accept self
     end
   end
+
+  private
 
   def resolve_function(function, type)
     enclosing_function_type = @current_function_type
@@ -137,7 +137,7 @@ class Resolver
   end
 
   def begin_scope
-    @scopes.push {}
+    @scopes.push({})
   end
 
   def end_scope
@@ -149,7 +149,7 @@ class Resolver
 
     scope = @scopes.last
 
-    Lox.error name, 'already a variable with this name in this scope.' if scope.key?(name.lexeme)
+    Lox.parse_error name, 'already a variable with this name in this scope.' if scope.key?(name.lexeme)
 
     scope[name.lexeme] = false
   end

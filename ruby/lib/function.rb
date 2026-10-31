@@ -18,7 +18,7 @@ class Function
     end
 
     begin
-      interpreter.execute_block @declaration.body, environment
+      interpreter.eval_block @declaration.body, environment
     rescue Return => e
       return e.value
     end

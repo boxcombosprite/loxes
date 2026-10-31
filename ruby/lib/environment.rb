@@ -14,7 +14,7 @@ class Environment
 
   def ancestor(distance)
     environment = self
-    [0..distance].each { environment = environment.enclosing }
+    (0...distance).each { environment = environment.enclosing }
     environment
   end
 
