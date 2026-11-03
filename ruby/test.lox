@@ -1,13 +1,14 @@
-class Cake {
-  init(flavor) {
-    this.flavor = flavor;
-    this.adjective = "mid";
-  }
-  taste() {
-    print "The " + this.flavor + " cake is " + this.adjective + "!";
+class Doughnut {
+  cook() {
+    print "fry until golden brown";
   }
 }
 
-var cake = Cake("cheese");
-// cake.adjective = "not very good";
-cake.taste();
+class BostonCream < Doughnut {
+  cook() {
+    super.cook();
+    print "pipe full of custard and coat with chocolate.";
+  }
+}
+
+BostonCream().cook();

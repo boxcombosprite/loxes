@@ -84,6 +84,19 @@ class Interpreter
     value
   end
 
+  def visit_super_expr(expr)
+    distance = @locals[expr]
+    superclass = @environment.get_at distance, 'super'
+
+    object = @environment.get_at(distance - 1, 'this')
+
+    method = superclass.find_method expr.method.lexeme
+
+    raise LoxRuntimeError.new expr.method, "undefined property '#{expr.method.lexeme}'." if method.nil?
+
+    method.bind object
+  end
+
   def visit_this_expr(expr)
     lookup_variable expr.keyword, expr
   end
@@ -242,7 +255,18 @@ class Interpreter
   end
 
   def visit_class_stmt(stmt)
+    superclass = nil
+    unless stmt.superclass.nil?
+      superclass = eval_ stmt.superclass
+      raise LoxRuntimeError.new stmt.superclass.name, 'superclass must be a class.' unless superclass.is_a? LoxClass
+    end
+
     @environment.define stmt.name.lexeme, nil
+
+    unless stmt.superclass.nil?
+      @environment = Environment.new @environment
+      @environment.define 'super', superclass
+    end
 
     methods = {}
     stmt.methods.each do |m|
@@ -250,7 +274,10 @@ class Interpreter
       methods[m.name.lexeme] = function
     end
 
-    klass = LoxClass.new stmt.name.lexeme, methods
+    klass = LoxClass.new stmt.name.lexeme, superclass, methods
+
+    @environment = @environment.enclosing unless superclass.nil?
+
     @environment.assign stmt.name, klass
     nil
   end

@@ -1,20 +1,22 @@
 # frozen_string_literal: true
 
 require_relative 'callable'
-require_relative 'interpreter'
 
 class LoxClass
   include Callable
 
-  attr_reader :name
+  attr_reader :name, :superclass
 
-  def initialize(name, methods)
+  def initialize(name, superclass, methods)
     @name = name
+    @superclass = superclass
     @methods = methods
   end
 
   def find_method(name)
     return @methods[name] if @methods.key? name
+
+    return superclass.find_method(name) unless superclass.nil?
 
     nil
   end

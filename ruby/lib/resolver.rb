@@ -28,6 +28,20 @@ class Resolver
     declare stmt.name
     define stmt.name
 
+    if !stmt.superclass.nil? && stmt.name.lexeme.eql?(stmt.superclass.name.lexeme)
+      Lox.parse_error stmt.superclass.name, "a class can't inherit from itself."
+    end
+
+    unless stmt.superclass.nil?
+      @current_class_type = :ct_subclass
+      resolve stmt.superclass
+    end
+
+    unless stmt.superclass.nil?
+      begin_scope
+      @scopes.last['super'] = true
+    end
+
     begin_scope
     @scopes.last['this'] = true
 
@@ -37,6 +51,8 @@ class Resolver
     end
 
     end_scope
+
+    end_scope unless stmt.superclass.nil?
 
     @current_class_type = enclosing_class_type
     nil
@@ -142,6 +158,17 @@ class Resolver
   def visit_set_expr(expr)
     resolve expr.value
     resolve expr.object
+    nil
+  end
+
+  def visit_super_expr(expr)
+    if @current_class_type == :ct_none
+      Lox.parse_error expr.keyword, "can't use 'super' outside of a class."
+    elsif @current_class_type != :ct_subclass
+      Lox.parse_error expr.keyword, "can't use 'super' in a class with no superclass."
+    end
+
+    resolve_local expr, expr.keyword
     nil
   end
 

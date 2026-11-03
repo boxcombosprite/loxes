@@ -98,6 +98,13 @@ class Parser
 
   def class_declaration
     name = consume :identifier, 'expect class name.'
+
+    superclass = nil
+    if match :less
+      consume :identifier, 'expect superclass name.'
+      superclass = Expr::Variable.new previous
+    end
+
     consume :left_brace, "expect '{' before class body."
 
     methods = []
@@ -105,7 +112,7 @@ class Parser
 
     consume :right_brace, "expect '}' after class body."
 
-    Stmt::Class.new name, methods
+    Stmt::Class.new name, superclass, methods
   end
 
   def statement
@@ -360,6 +367,14 @@ class Parser
     return Expr::Literal.new(true) if match :true
     return Expr::Literal.new(nil) if match :nil
     return Expr::Literal.new(previous.literal) if match :number, :string
+
+    if match :super
+      keyword = previous
+      consume :dot, "expect '.' after 'super'."
+      method = consume :identifier, 'expect superclass method name.'
+      return Expr::Super.new keyword, method
+    end
+
     return Expr::This.new(previous) if match :this
     return Expr::Variable.new(previous) if match :identifier
 

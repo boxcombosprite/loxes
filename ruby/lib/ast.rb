@@ -113,6 +113,19 @@ module Expr
     attr_reader :value
   end
 
+  class Super
+    include Acceptor
+    def accept(visitor)
+      visitor.visit_super_expr self
+    end
+    def initialize(keyword, method)
+      @keyword = keyword
+      @method = method
+    end
+    attr_reader :keyword
+    attr_reader :method
+  end
+
   class This
     include Acceptor
     def accept(visitor)
@@ -173,6 +186,9 @@ module Expr
     def visit_set_expr(o)
       raise NotImplementedError
     end
+    def visit_super_expr(o)
+      raise NotImplementedError
+    end
     def visit_this_expr(o)
       raise NotImplementedError
     end
@@ -201,11 +217,13 @@ module Stmt
     def accept(visitor)
       visitor.visit_class_stmt self
     end
-    def initialize(name, methods)
+    def initialize(name, superclass, methods)
       @name = name
+      @superclass = superclass
       @methods = methods
     end
     attr_reader :name
+    attr_reader :superclass
     attr_reader :methods
   end
 
