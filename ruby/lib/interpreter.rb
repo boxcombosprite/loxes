@@ -31,23 +31,24 @@ class Interpreter
 
   attr_reader :globals
 
+  class Clock
+    include Callable
+    def arity
+      0
+    end
+
+    def _call(_interpreter, _arguments)
+      Time.now.to_f
+    end
+
+    def to_s
+      '<native fn>'
+    end
+  end
+
   def initialize
     @globals = Environment.new
-    @globals.define 'clock', Class.new do
-      include Callable
-      def arity
-        0
-      end
-
-      def _call(_interpreter, _arguments)
-        Time.now.to_f
-      end
-
-      def to_s
-        '<native fn>'
-      end
-    end.new
-
+    @globals.define 'clock', Clock.new
     @environment = globals
     @locals = {}
   end
