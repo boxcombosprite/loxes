@@ -44,6 +44,11 @@ typedef struct {
   int depth;
 } Local;
 
+typedef struct {
+  uint8_t index;
+  bool is_local;
+} Upvalue;
+
 typedef enum {
   TYPE_FUNCTION,
   TYPE_SCRIPT
@@ -55,6 +60,7 @@ typedef struct Compiler {
   FunctionType type;
   Local locals[UINT8_COUNT];
   int local_count;
+  Upvalue upvalues[UINT8_COUNT];
   int scope_depth;
 } Compiler;
 
@@ -250,6 +256,38 @@ static int resolve_local(Compiler* compiler, Token* name) {
   return -1;
 }
 
+static int add_upvalue(Compiler *compiler, uint8_t index, bool is_local) {
+  int upvalue_count = compiler->funciton->upvalue_count;
+
+  for (int i = 0; i < upvalue_count; ++i) {
+    Upvalue *upvalue = &compiler->upvalues[i];
+    if (upvalue->index == index && upvalue->is_local == is_local) {
+      return i;
+    }
+  }
+
+  if (upvalue_count == UINT8_COUNT) {
+    error("too many closure variables in function.");
+    return 0;
+  }
+  
+  compiler->upvalues[upvalue_count].is_local = is_local;
+  compiler->upvalues[upvalue_count].index = index;
+  return compiler->function->upvalue_count++;
+}
+
+static int resolve_upvalue(Compiler *compiler, Token *name) {
+  if (compiler->enclosing == NULL)
+    return -1;
+
+  int local = resolve_local(compiler->enclosing, name);
+  if (local != -1) {
+    return add_upvalue(compiler, (uint8_t)local, true);
+  }
+
+  return -1;
+}
+
 static void add_local(Token name) {
   if (current->local_count == UINT8_COUNT) {
     error("too many local variables in function.");
@@ -369,6 +407,9 @@ static void named_variable(Token name, bool can_assign) {
   if (arg != -1) {
     get_op = OP_GET_LOCAL;
     set_op = OP_SET_LOCAL;
+  } else if ((arg = resolve_upvalue(current, &name)) != -1) {
+    get_op = OP_GET_UPVALUE;
+    set_op = OP_SET_UPVALUE;
   } else {
     arg = identifier_constant(&name);
     get_op = OP_GET_GLOBAL;
@@ -524,7 +565,7 @@ static void function(FunctionType type) {
   block();
 
   ObjFunction* function = end_compiler();
-  emit_bytes(OP_CONSTANT, make_constant(OBJ_VAL(function)));
+  emit_bytes(OP_CLOSURE, make_constant(OBJ_VAL(function)));
 }
 
 static void fun_declaration() {
