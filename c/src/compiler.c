@@ -42,6 +42,7 @@ typedef struct {
 typedef struct {
   Token name;
   int depth;
+  bool is_captured;
 } Local;
 
 typedef struct {
@@ -196,6 +197,7 @@ static void init_compiler(Compiler* compiler, FunctionType type) {
 
   Local* local = &current->locals[current->local_count++];
   local->depth = 0;
+  local->is_captured = false;
   local->name.start = "";
   local->name.length = 0;
 }
@@ -222,7 +224,11 @@ static void end_scope() {
 
   while (current->local_count > 0 &&
 	 current->locals[current->local_count - 1].depth > current->scope_depth) {
-    emit_byte(OP_POP);
+    if (current->locals[current->local_count - 1].is_captured) {
+      emit_byte(OP_CLOSE_UPVALUE);
+    } else {
+      emit_byte(OP_POP);
+    }
     current->local_count--;
   }
 }
@@ -257,7 +263,7 @@ static int resolve_local(Compiler* compiler, Token* name) {
 }
 
 static int add_upvalue(Compiler *compiler, uint8_t index, bool is_local) {
-  int upvalue_count = compiler->funciton->upvalue_count;
+  int upvalue_count = compiler->function->upvalue_count;
 
   for (int i = 0; i < upvalue_count; ++i) {
     Upvalue *upvalue = &compiler->upvalues[i];
@@ -282,7 +288,13 @@ static int resolve_upvalue(Compiler *compiler, Token *name) {
 
   int local = resolve_local(compiler->enclosing, name);
   if (local != -1) {
+    compiler->enclosing->locals[local].is_captured = true;
     return add_upvalue(compiler, (uint8_t)local, true);
+  }
+
+  int upvalue = resolve_upvalue(compiler->enclosing, name);
+  if (upvalue != -1) {
+    return add_upvalue(compiler, (uint8_t)upvalue, false);
   }
 
   return -1;
@@ -297,6 +309,7 @@ static void add_local(Token name) {
   Local* local = &current->locals[current->local_count++];
   local->name = name;
   local->depth = -1;
+  local->is_captured = false;
 }
 
 static void declare_variable() {
@@ -566,6 +579,11 @@ static void function(FunctionType type) {
 
   ObjFunction* function = end_compiler();
   emit_bytes(OP_CLOSURE, make_constant(OBJ_VAL(function)));
+
+  for (int i = 0; i < function->upvalue_count; ++i) {
+    emit_byte(compiler.upvalues[i].is_local ? 1 : 0);
+    emit_byte(compiler.upvalues[i].index);
+  }
 }
 
 static void fun_declaration() {
